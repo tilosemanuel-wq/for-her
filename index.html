@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Date Request v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Nunito+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: an "installer wizard" card — stepper on top, one question per screen, ticket summary at the end */
+:root{
+  --bg:#fbf3f4; --card:#ffffff; --fg:#2b1d24; --muted:#7c6670;
+  --accent:#d6336c; --accent-soft:#fde3ec; --line:#efd9e0; --ok:#2f9e6b; --code-bg:#fff7f9;
+  --display:"Fraunces", Georgia, serif;
+  --body:"Nunito Sans", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1d1418; --card:#2a1d23; --fg:#f7e9ee; --muted:#b79aa6;
+  --accent:#ff6b9a; --accent-soft:#4a2533; --line:#3d2a32; --ok:#5fd39a; --code-bg:#22171c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1d1418; --card:#2a1d23; --fg:#f7e9ee; --muted:#b79aa6;
+  --accent:#ff6b9a; --accent-soft:#4a2533; --line:#3d2a32; --ok:#5fd39a; --code-bg:#22171c; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-inline:16px;padding-block:32px;display:flex;justify-content:center}
+.wrap{width:100%;max-width:580px;display:flex;flex-direction:column;gap:18px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  box-shadow:0 10px 30px -18px rgba(214,51,108,.45)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:12px;color:var(--muted);flex-wrap:wrap}
+.pill{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-weight:500}
+.pill.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+
+.steps{display:flex;gap:6px;padding:14px 18px 0}
+.steps i{flex:1;height:5px;border-radius:99px;background:var(--line);transition:background .3s}
+.steps i.on{background:var(--accent)}
+.steplabel{padding:8px 18px 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+.screen{padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px;animation:in .35s ease}
+@keyframes in{from{opacity:.4;transform:translateX(12px)}to{opacity:1;transform:none}}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.8rem,6.5vw,2.5rem);line-height:1.12;margin:0;text-wrap:balance}
+h1 em{color:var(--accent);font-style:italic;font-weight:500}
+.lead{margin:0;color:var(--muted);max-width:60ch}
+label.f{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.03em;display:flex;flex-direction:column;gap:6px}
+input[type=text],input[type=date],textarea{font:inherit;font-family:var(--body);font-size:16px;color:var(--fg);background:var(--code-bg);
+  border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;box-sizing:border-box}
+textarea{min-height:110px;resize:vertical}
+input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+  font-family:var(--mono);font-size:13px;line-height:1.7;overflow-x:auto}
+.k{color:var(--accent)} .s{color:var(--ok)} .c{color:var(--muted)}
+
+button{font:inherit;font-weight:700;border-radius:10px;padding:12px 22px;cursor:pointer;border:1px solid transparent;transition:transform .15s, background .2s}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:var(--accent);color:#fff}
+.primary:not(:disabled):hover{transform:translateY(-2px)}
+.ghost{background:transparent;color:var(--muted);border-color:var(--line);font-weight:600}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.actions{display:flex;gap:12px;align-items:center;min-height:56px;flex-wrap:wrap}
+#no.flee{position:fixed;z-index:5;transition:left .25s, top .25s}
+.hint{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:1.4em;margin:0}
+
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.choice{text-align:left;background:var(--code-bg);border:1px solid var(--line);color:var(--fg);font-weight:600;padding:12px 14px}
+.choice small{display:block;font-family:var(--mono);font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--code-bg);border:1px solid var(--line);color:var(--fg);font-weight:600;padding:8px 14px;border-radius:99px;font-size:14px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.ticket{border:1px dashed var(--accent);border-radius:12px;padding:16px 18px;background:var(--code-bg);display:grid;gap:8px}
+.row{display:grid;grid-template-columns:110px 1fr;gap:10px;font-size:15px}
+.row b{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);padding-top:2px}
+.row span{min-width:0;overflow-wrap:anywhere}
+.status{font-family:var(--mono);font-size:12px;margin:0;color:var(--muted)}
+.status.ok{color:var(--ok)}
+
+.inbox h2{font-family:var(--display);font-size:1.4rem;margin:0}
+.resp{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px;font-size:14px}
+.resp time{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+footer{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center}
+.heart{position:fixed;top:-20px;pointer-events:none;color:var(--accent);animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(200deg);opacity:.2}}
+@media (prefers-reduced-motion:reduce){.heart{display:none}.screen{animation:none}#no.flee{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="card" aria-live="polite">
+    <div class="bar"><span class="pill" id="badge">● open</span><span>date_request.exe · heart/main ← me/feelings</span></div>
+    <div class="steps" id="steps"></div>
+    <div class="steplabel" id="steplabel"></div>
+    <div id="view"></div>
+  </section>
+
+  <footer>made with HTML, CSS, JS and a lot of courage</footer>
+</div>
+
+<script>
+// ===== SETTINGS: change this to YOUR email so her answers get sent to you =====
+const YOUR_EMAIL = "your-email@example.com";
+// ==========================================================================
+
+const S = { name:"", answer:"", plan:"", date:"", time:"", food:[], note:"" };
+const STEPS = ["Hello","The question","Date idea","Schedule","Food","Message","Confirmed"];
+let step = 0;
+const $ = s => document.querySelector(s);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function stepper(){
+  $('#steps').innerHTML = STEPS.map((_,i)=>`<i class="${i<=step?'on':''}"></i>`).join('');
+  $('#steplabel').textContent = `step ${step+1} of ${STEPS.length} · ${STEPS[step].toLowerCase()}`;
+}
+function nav(nextOk=true, nextLabel="Next →"){
+  return `<div class="nav"><button class="ghost" type="button" data-back>← Back</button>
+  <button class="primary" type="button" data-next ${nextOk?'':'disabled'}>${nextLabel}</button></div>`;
+}
+function go(n){ step=n; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+const screens = [
+  // 0 hello
+  () => `<div class="screen">
+    <h1>Hi there! I made <em>something</em> for you.</h1>
+    <p class="lead">I'm a BSIT student, so instead of saying it face to face, I coded it. It only takes a minute, promise.</p>
+    <label class="f" for="nm">WHAT SHOULD I CALL YOU?
+      <input id="nm" type="text" placeholder="Your name" value="${esc(S.name)}" autocomplete="given-name"></label>
+    <div class="nav"><span></span><button class="primary" type="button" data-next ${S.name.trim()?'':'disabled'}>Start →</button></div>
+  </div>`,
+  // 1 question
+  () => `<div class="screen">
+    <h1>${esc(S.name)}, are you free for a date, <em>or</em> can I be more than just a friend?</h1>
+<pre><span class="c">// relationship.js</span>
+<span class="k">const</span> me = { course: <span class="s">"BSIT"</span>, crush: <span class="s">"${esc(S.name)}"</span> };
+<span class="k">if</span> (you.<span class="k">sayYes</span>()) life.<span class="k">deploy</span>(<span class="s">"happiness"</span>);</pre>
+    <div class="actions"><button class="primary" id="yes" type="button">Yes 💗</button><button class="ghost" id="no" type="button">No</button></div>
+    <p class="hint" id="hint">// choose wisely</p>
+  </div>`,
+  // 2 plan
+  () => `<div class="screen">
+    <h1>Yay! Where should we <em>go</em>?</h1>
+    <div class="choices">${[["Coffee date","low latency, high vibes"],["Movie night","render time: 2 hrs"],["Food trip","fetch('street food')"],["Sunset walk","offline mode"],["Arcade","player 2 needed"],["Surprise me","random()"]]
+      .map(([t,s])=>`<button class="choice" type="button" data-plan="${t}" aria-pressed="${S.plan===t}">${t}<small>// ${s}</small></button>`).join('')}</div>
+    ${nav(!!S.plan)}</div>`,
+  // 3 schedule
+  () => `<div class="screen">
+    <h1>When are you <em>free</em>?</h1>
+    <label class="f" for="dt">PICK A DAY<input id="dt" type="date" value="${S.date}" min="${new Date().toISOString().slice(0,10)}"></label>
+    <div class="f" style="font-family:var(--mono);font-size:12px;color:var(--muted)">TIME OF DAY</div>
+    <div class="chips">${["Morning","Lunch","Afternoon","Evening"].map(t=>`<button class="chip" type="button" data-time="${t}" aria-pressed="${S.time===t}">${t}</button>`).join('')}</div>
+    ${nav(!!(S.date && S.time))}</div>`,
+  // 4 food
+  () => `<div class="screen">
+    <h1>What are you <em>craving</em>?</h1>
+    <p class="lead">Pick as many as you like.</p>
+    <div class="chips">${["Milk tea","Coffee","Samgyup","Pizza","Street food","Ice cream","Ramen","Desserts","Anything with you"].map(f=>`<button class="chip" type="button" data-food="${f}" aria-pressed="${S.food.includes(f)}">${f}</button>`).join('')}</div>
+    ${nav(S.food.length>0)}</div>`,
+  // 5 note
+  () => `<div class="screen">
+    <h1>Anything you want to <em>tell me</em>?</h1>
+    <label class="f" for="nt">YOUR MESSAGE (OPTIONAL)<textarea id="nt" placeholder="Type anything...">${esc(S.note)}</textarea></label>
+    ${nav(true,"Submit 💌")}</div>`,
+  // 6 done
+  () => {
+    const d = S.date ? new Date(S.date+"T00:00").toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}) : "";
+    return `<div class="screen">
+    <h1>It's a <em>date</em>, ${esc(S.name)}!</h1>
+    <div class="ticket" id="ticket">
+      <div class="row"><b>ANSWER</b><span>Yes 💗</span></div>
+      <div class="row"><b>DATE IDEA</b><span>${esc(S.plan)}</span></div>
+      <div class="row"><b>WHEN</b><span>${esc(d)} · ${esc(S.time)}</span></div>
+      <div class="row"><b>FOOD</b><span>${esc(S.food.join(", "))}</span></div>
+      ${S.note?`<div class="row"><b>MESSAGE</b><span>${esc(S.note)}</span></div>`:''}
+    </div>
+    <p class="status" id="status">&gt; sending your answers...</p>
+    <div class="nav"><button class="ghost" type="button" data-restart>Start over</button><button class="primary" type="button" id="copy">Copy my answers</button></div>
+  </div>`;}
+];
+
+function render(){
+  stepper();
+  $('#view').innerHTML = screens[step]();
+  $('#badge').className = step===6 ? 'pill ok' : 'pill';
+  $('#badge').textContent = step===6 ? '✓ merged' : '● open';
+  bind();
+}
+
+function bind(){
+  const v = $('#view');
+  v.querySelector('[data-back]')?.addEventListener('click',()=>go(step===2?0:step-1));
+  v.querySelector('[data-next]')?.addEventListener('click',()=>{ if(step===5) submit(); go(step+1); });
+  v.querySelector('[data-restart]')?.addEventListener('click',()=>{ Object.assign(S,{answer:"",plan:"",date:"",time:"",food:[],note:""}); go(0); });
+
+  const nm = $('#nm'); if(nm){ nm.focus(); nm.addEventListener('input',()=>{ S.name=nm.value; v.querySelector('[data-next]').disabled=!S.name.trim(); });
+    nm.addEventListener('keydown',e=>{ if(e.key==='Enter' && S.name.trim()) go(1); }); }
+
+  if(step===1) setupQuestion();
+  v.querySelectorAll('[data-plan]').forEach(b=>b.addEventListener('click',()=>{ S.plan=b.dataset.plan; render(); }));
+  v.querySelectorAll('[data-time]').forEach(b=>b.addEventListener('click',()=>{ S.time=b.dataset.time; render(); }));
+  const dt=$('#dt'); if(dt) dt.addEventListener('change',()=>{ S.date=dt.value; v.querySelector('[data-next]').disabled=!(S.date&&S.time); });
+  v.querySelectorAll('[data-food]').forEach(b=>b.addEventListener('click',()=>{ const f=b.dataset.food;
+    S.food = S.food.includes(f) ? S.food.filter(x=>x!==f) : [...S.food,f]; render(); }));
+  const nt=$('#nt'); if(nt) nt.addEventListener('input',()=>S.note=nt.value);
+  const cp=$('#copy'); if(cp) cp.addEventListener('click',copyAnswers);
+}
+
+function setupQuestion(){
+  const no=$('#no'), yes=$('#yes'), hint=$('#hint');
+  const lines=["// Error 404: 'No' not found","// are you sure? 🥺","// access denied","// try the pink button","// syntax error: wrong answer","// that button is deprecated"];
+  let tries=0;
+  const flee=e=>{ e.preventDefault(); tries++; no.classList.add('flee');
+    const p=20,w=no.offsetWidth,h=no.offsetHeight;
+    no.style.left=(p+Math.random()*(innerWidth-w-p*2))+'px'; no.style.top=(p+Math.random()*(innerHeight-h-p*2))+'px';
+    hint.textContent=lines[(tries-1)%lines.length]; yes.style.transform=`scale(${Math.min(1+tries*.08,1.6)})`; };
+  no.addEventListener('mouseenter',flee); no.addEventListener('touchstart',flee,{passive:false}); no.addEventListener('click',flee);
+  yes.addEventListener('click',()=>{ S.answer="Yes"; hearts(); go(2); });
+}
+
+function hearts(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for(let i=0;i<40;i++){ const s=document.createElement('span'); s.className='heart'; s.textContent='♥';
+    s.style.left=Math.random()*100+'vw'; s.style.fontSize=(14+Math.random()*20)+'px';
+    s.style.animationDuration=(2.5+Math.random()*2.5)+'s'; s.style.animationDelay=(Math.random()*1.2)+'s';
+    document.body.appendChild(s); setTimeout(()=>s.remove(),6000); }
+}
+
+function summaryText(){
+  return `💌 Date Request — answers from ${S.name}\nAnswer: Yes\nDate idea: ${S.plan}\nWhen: ${S.date} (${S.time})\nFood: ${S.food.join(", ")}${S.note?`\nMessage: ${S.note}`:''}`;
+}
+function setStatus(msg, ok){ const el=$('#status'); if(el){ el.textContent=msg; el.className='status'+(ok?' ok':''); } }
+
+async function submit(){
+  const fail = "> couldn't send automatically. Tap “Copy my answers” and send them to me on Messenger 😊";
+  if(!YOUR_EMAIL || YOUR_EMAIL.includes("@example")){ setTimeout(()=>setStatus(fail),50); return; }
+  try{
+    const res = await fetch("https://formsubmit.co/ajax/" + YOUR_EMAIL, {
+      method:"POST", headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body: JSON.stringify({ _subject:"💌 " + S.name + " answered your date request!", _template:"table",
+        Name:S.name, Answer:"Yes", "Date idea":S.plan, Day:S.date, Time:S.time, Food:S.food.join(", "), Message:S.note || "(none)" })
+    });
+    if(!res.ok) throw new Error();
+    setStatus("> sent! I'll see your answers. Can't wait 💗", true);
+  }catch(e){ setStatus(fail); }
+}
+
+async function copyAnswers(){
+  const b=$('#copy');
+  try{ await navigator.clipboard.writeText(summaryText()); b.textContent="Copied ✓"; }
+  catch(e){ const r=document.createRange(); r.selectNodeContents($('#ticket')); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    b.textContent="Selected, now copy it"; }
+}
+
+render();
+
+</script>
+</body>
+</html>
